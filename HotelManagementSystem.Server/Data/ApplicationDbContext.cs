@@ -7,11 +7,13 @@ namespace HotelManagementSystem.Server.Data;
 
 public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : DbContext(options)
 {
-    public DbSet<Todo> Todos { get; set; }
-    public DbSet<Hotel> Hotels { get; set; }
-    public DbSet<Room> Rooms { get; set; }
-    public DbSet<User> Users { get; set; }
-    public DbSet<Booking> Bookings { get; set; }
+    public DbSet<Todo> Todos { get; set; } = default!;
+    public DbSet<Hotel> Hotels { get; set; } = default!;
+    public DbSet<Room> Rooms { get; set; } = default!;
+    public DbSet<User> Users { get; set; } = default!;
+    public DbSet<Booking> Bookings { get; set; } = default!;
+    public DbSet<Payment> Payment { get; set; } = default!;
+    public DbSet<Review> Review { get; set; } = default!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -96,8 +98,4 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             .Property(b => b.CheckOutDate)
             .HasColumnType("date");
     }
-
-public DbSet<HotelManagementSystem.Server.Models.Hotels.Payment> Payment { get; set; } = default!;
-
-public DbSet<HotelManagementSystem.Server.Models.Hotels.Review> Review { get; set; } = default!;
 }
