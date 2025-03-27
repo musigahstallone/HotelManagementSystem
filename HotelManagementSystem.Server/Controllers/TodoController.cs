@@ -1,136 +1,211 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Caching.Memory;
-using HotelManagementSystem.Server.Models;
 using HotelManagementSystem.Server.Data;
-using System.Collections.Generic;
-using System;
-using System.Threading.Tasks;
-
+using HotelManagementSystem.Server.Models.Hotels;
+using HotelManagementSystem.Server.Models.Todo;
+using HotelManagementSystem.Server.Models.Auth;
 namespace HotelManagementSystem.Server.Controllers;
 
 [Route("api/todos")]
 [ApiController]
-public class TodoController : ControllerBase
+public class TodoController(ApplicationDbContext context) : ControllerBase
 {
-    private readonly ApplicationDbContext _context;
-    private readonly IMemoryCache _cache;
-    private readonly string _todosCacheKey = "todos";
-    private readonly TimeSpan _cacheDuration = TimeSpan.FromMinutes(5);
+    private readonly ApplicationDbContext _context = context;
 
-    public TodoController(ApplicationDbContext context, IMemoryCache cache)
+    private IQueryable<Todo> GetTodosQuery() => _context.Todos.AsQueryable();
+
+    private static async Task<PaginatedResponse<Todo>> GetPaginatedTodos(int page, int pageSize, IQueryable<Todo> query)
     {
-        _context = context;
-        _cache = cache;
+        if (page < 1 || pageSize < 1)
+            throw new ArgumentException("Page and pageSize must be greater than zero.");
+
+        var totalCount = await query.CountAsync();
+        var items = await query
+            .OrderBy(t => t.IsCompleted)
+            .ThenBy(t => t.Id)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
+
+        return new PaginatedResponse<Todo>(items, page, pageSize, totalCount);
     }
 
-    // 🔹 GET ALL TODOS (with caching)
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<Todo>>> GetTodos()
+    public async Task<ActionResult<PaginatedResponse<Todo>>> GetTodos(
+        [FromQuery] int page = 1, 
+        [FromQuery] int pageSize = 10)
     {
-        return await _cache.GetOrCreateAsync(_todosCacheKey, async entry =>
-        {
-            entry.AbsoluteExpirationRelativeToNow = _cacheDuration;
-            return await _context.Todos.ToListAsync();
-        });
+        return Ok(await GetPaginatedTodos(page, pageSize, GetTodosQuery()));
     }
 
-    // 🔹 GET A SINGLE TODO BY ID (with caching)
+    [HttpGet("all-todos")]
+    public async Task<ActionResult<ApiResponse<object>>> GetTodos(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 10,
+        [FromQuery] string? searchQuery = "")
+    {
+        var query = _context.Todos.AsQueryable();
+
+        // Apply search filter if searchQuery is provided (ignoring case)
+        if (!string.IsNullOrWhiteSpace(searchQuery))
+        {
+            //var loweredSearchQuery = searchQuery.ToLower();
+            //query = query.Where(t => t.Note.ToLower().Contains(loweredSearchQuery));
+            query = query.Where(t => (t.Note ?? string.Empty).Contains(searchQuery, StringComparison.CurrentCultureIgnoreCase));
+        }
+
+        // Sort: Prioritize uncompleted todos first, then by ID
+        query = query.OrderBy(t => t.IsCompleted).ThenBy(t => t.Id);
+
+        // If page or pageSize is zero or negative, return all todos
+        if (page < 1 || pageSize < 1)
+        {
+            var allTodos = await query.ToListAsync();
+            return Ok(ApiResponse<object>.SuccessResponse(allTodos, "Retrieved all todos"));
+        }
+
+        // Otherwise, apply pagination
+        var totalCount = await query.CountAsync();
+        var paginatedTodos = await query.Skip((page - 1) * pageSize).Take(pageSize).ToListAsync();
+
+        return Ok(new PaginatedResponse<Todo>(paginatedTodos, page, pageSize, totalCount));
+    }
+
+
     [HttpGet("{id:guid}")]
-    public async Task<ActionResult<Todo>> GetTodoById(Guid id)
+    public async Task<ActionResult<ApiResponse<Todo>>> GetTodoById(Guid id)
     {
-        string cacheKey = $"todo_{id}";
-
-        var todo = await _cache.GetOrCreateAsync(cacheKey, async entry =>
-        {
-            entry.AbsoluteExpirationRelativeToNow = _cacheDuration;
-            return await _context.Todos.FindAsync(id);
-        });
-
-        if (todo == null) return NotFound("Todo not found");
-        return todo;
+        var todo = await _context.Todos.FindAsync(id);
+        return todo != null
+            ? Ok(ApiResponse<Todo>.SuccessResponse(todo))
+            : NotFound(ApiResponse<Todo>.FailureResponse("Todo not found"));
     }
 
-    // 🔹 CREATE A NEW TODO (invalidate cache)
     [HttpPost]
-    public async Task<ActionResult<Todo>> CreateTodo([FromBody] Todo todoDto)
+    public async Task<ActionResult<ApiResponse<Todo>>> CreateTodo(
+        [FromBody] Todo todoDto)
     {
         if (string.IsNullOrWhiteSpace(todoDto.Note))
-            return BadRequest("Note cannot be empty");
+            return BadRequest(ApiResponse<Todo>.FailureResponse("Note cannot be empty"));
 
         var todo = Todo.CreateNew(todoDto.Note);
         _context.Todos.Add(todo);
         await _context.SaveChangesAsync();
 
-        _cache.Remove(_todosCacheKey); // Invalidate cached todos
-
-        return CreatedAtAction(nameof(GetTodoById), new { id = todo.Id }, todo);
+        return CreatedAtAction(nameof(GetTodoById), new { id = todo.Id }, ApiResponse<Todo>.SuccessResponse(todo));
     }
 
-    // 🔹 UPDATE A TODO (invalidate cache)
+ 
     [HttpPut("{id:guid}")]
-    public async Task<IActionResult> UpdateTodo(Guid id, [FromBody] string newNote)
+    public async Task<IActionResult> UpdateTodo(
+        Guid id, 
+        [FromBody] UpdateTodoRequest request)
     {
         var todo = await _context.Todos.FindAsync(id);
-        if (todo == null) return NotFound("Todo not found");
+        if (todo == null)
+            return NotFound(ApiResponse<Todo>.FailureResponse("Todo not found"));
 
-        if (string.IsNullOrWhiteSpace(newNote))
-            return BadRequest("Note cannot be empty");
+        if (string.IsNullOrWhiteSpace(request.NewNote))
+            return BadRequest(ApiResponse<Todo>.FailureResponse("Note cannot be empty"));
 
-        todo.UpdateNote(newNote);
+        todo.UpdateNote(request.NewNote);
         await _context.SaveChangesAsync();
-
-        _cache.Remove(_todosCacheKey); // Invalidate all todos cache
-        _cache.Remove($"todo_{id}");   // Invalidate single todo cache
 
         return NoContent();
     }
 
-    // 🔹 MARK A TODO AS COMPLETED (invalidate cache)
-    [HttpPatch("{id:guid}/complete")]
-    public async Task<IActionResult> MarkAsCompleted(Guid id)
+
+    [HttpPatch("{id:guid}/toggle")]
+    public async Task<IActionResult> ToggleCompletion(Guid id)
     {
         var todo = await _context.Todos.FindAsync(id);
-        if (todo == null) return NotFound("Todo not found");
+        if (todo == null)
+            return NotFound(ApiResponse<Todo>.FailureResponse("Todo not found"));
 
-        todo.MarkAsCompleted();
+        todo.ToggleCompletion();
         await _context.SaveChangesAsync();
 
-        _cache.Remove(_todosCacheKey);
-        _cache.Remove($"todo_{id}");
-
-        return Ok(todo);
+        return Ok(ApiResponse<Todo>.SuccessResponse(todo));
     }
 
-    // 🔹 MARK A TODO AS UNCOMPLETED (invalidate cache)
-    [HttpPatch("{id}/uncomplete")]
-    public async Task<IActionResult> UncompleteTodo(Guid id)
-    {
-        var todo = await _context.Todos.FindAsync(id);
-        if (todo == null) return NotFound();
-
-        todo.MarkAsNotCompleted();
-        await _context.SaveChangesAsync();
-
-        _cache.Remove(_todosCacheKey);
-        _cache.Remove($"todo_{id}");
-
-        return Ok(todo);
-    }
-
-    // 🔹 DELETE A TODO (invalidate cache)
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> DeleteTodo(Guid id)
     {
         var todo = await _context.Todos.FindAsync(id);
-        if (todo == null) return NotFound("Todo not found");
+        if (todo == null)
+            return NotFound(ApiResponse<Todo>.FailureResponse("Todo not found"));
 
         _context.Todos.Remove(todo);
         await _context.SaveChangesAsync();
 
-        _cache.Remove(_todosCacheKey);
-        _cache.Remove($"todo_{id}");
+        return NoContent();
+    }
+
+    [HttpGet("completed")]
+    public async Task<ActionResult<PaginatedResponse<Todo>>> GetCompletedTodos(
+        [FromQuery] int page = 1, 
+        [FromQuery] int pageSize = 10)
+    {
+        return Ok(await GetPaginatedTodos(page, pageSize, GetTodosQuery().Where(t => t.IsCompleted)));
+    }
+
+    [HttpGet("incomplete")]
+    public async Task<ActionResult<PaginatedResponse<Todo>>> GetIncompleteTodos(
+        [FromQuery] int page = 1, 
+        [FromQuery] int pageSize = 10)
+    {
+        return Ok(await GetPaginatedTodos(page, pageSize, GetTodosQuery().Where(t => !t.IsCompleted)));
+    }
+
+    [HttpDelete("bulk-delete")]
+    public async Task<IActionResult> BulkDelete(
+        [FromBody] List<Guid> ids)
+    {
+        var todos = await _context.Todos.Where(t => ids.Contains(t.Id)).ToListAsync();
+
+        if (todos.Count == 0)
+            return NotFound(ApiResponse<string>.FailureResponse("No matching todos found"));
+
+        _context.Todos.RemoveRange(todos);
+        await _context.SaveChangesAsync();
 
         return NoContent();
+    }
+
+    [HttpPost("bulk-add")]
+    public async Task<IActionResult> BulkAdd([FromBody] List<string> notes)
+    {
+        if (notes == null || notes.Count == 0)
+            return BadRequest(ApiResponse<string>.FailureResponse("No todo items provided."));
+
+        var newTodos = notes.Select(Todo.CreateNew).ToList();
+        _context.Todos.AddRange(newTodos);
+        await _context.SaveChangesAsync();
+
+        return Created("bulk-add", ApiResponse<List<Todo>>.SuccessResponse(newTodos));
+    }
+
+    [HttpPatch("{id:guid}/complete")]
+    public async Task<IActionResult> MarkAsCompleted(Guid id)
+    {
+        var todo = await _context.Todos.FindAsync(id);
+        if (todo == null) return NotFound(ApiResponse<Todo>.FailureResponse("Todo not found"));
+
+        todo.MarkAsCompleted();
+        await _context.SaveChangesAsync();
+
+        return Ok(ApiResponse<Todo>.SuccessResponse(todo, "Todo marked as completed"));
+    }
+
+    [HttpPatch("{id:guid}/uncomplete")]
+    public async Task<IActionResult> MarkAsNotCompleted(Guid id)
+    {
+        var todo = await _context.Todos.FindAsync(id);
+        if (todo == null) return NotFound(ApiResponse<Todo>.FailureResponse("Todo not found"));
+
+        todo.MarkAsNotCompleted();
+        await _context.SaveChangesAsync();
+
+        return Ok(ApiResponse<Todo>.SuccessResponse(todo, "Todo marked as not completed"));
     }
 }

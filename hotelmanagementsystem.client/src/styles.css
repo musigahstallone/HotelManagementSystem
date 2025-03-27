@@ -1,6 +1,12 @@
 /* You can add global styles to this file, and also import other style files */
 @import "tailwindcss";
 
+*{
+  font-family: 'IBM Plex Mono ExtraLight', sans-serif;
+  font-size: 18px;
+}
+
 body{
   margin: 20px;
 }
+
