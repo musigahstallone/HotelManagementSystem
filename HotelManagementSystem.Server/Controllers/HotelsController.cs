@@ -17,7 +17,7 @@ public class HotelsController(ApplicationDbContext context) : ControllerBase
       int page, int pageSize, IQueryable<T> query) where T : class
     {
         if (page < 1 || pageSize < 1)
-            throw new ArgumentException("Page and pageSize must be greater than zero.");
+            throw new ArgumentException("Page and PageSize must be greater than zero.");
 
         var totalCount = await query.CountAsync();
         var items = await query
@@ -28,17 +28,12 @@ public class HotelsController(ApplicationDbContext context) : ControllerBase
         return new PaginatedResponse<T>(items, totalCount, pageSize, page);
     }
 
-    [HttpGet]
-    public async Task<ActionResult<IEnumerable<Hotel>>> GetHotels()
-    {
-        return await _context.Hotels.ToListAsync();
-    }
-   
+    /*public async Task<ActionResult<IEnumerable<Hotel>>> GetHotels() => await _context.Hotels.ToListAsync(); //[HttpGet("all-hotels")]*/
 
-    [HttpGet("all-hotels")]
+    [HttpGet]
     public async Task<ActionResult<PaginatedResponse<HotelDto>>> GetAllHotels(
-     [FromQuery] int pageNumber,
-     [FromQuery] int pageSize)
+     [FromQuery] int pageNumber = 1,
+     [FromQuery] int pageSize = 5)
     {
         var query = GetEntityQuery<Hotel>()
         .OrderBy(h => h.Id)
