@@ -84,9 +84,9 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             .HasForeignKey(b => b.RoomId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        modelBuilder.Entity<Booking>()
-            .Property(b => b.TotalPrice)
-            .HasColumnType("decimal(18,2)");
+        //modelBuilder.Entity<Booking>()
+        //    .Property(b => b.TotalPrice)
+        //    .HasColumnType("decimal(18,2)");
 
         modelBuilder.Entity<Booking>()
             .Property(b => b.CheckInDate)
