@@ -14,7 +14,7 @@ public class HotelsController(ApplicationDbContext context) : ControllerBase
     public IQueryable<T> GetEntityQuery<T>() where T : class => _context.Set<T>().AsQueryable();
 
     public static async Task<PaginatedResponse<T>> GetPaginatedData<T>(
-      int page, int pageSize, IQueryable<T> query)
+      int page, int pageSize, IQueryable<T> query) where T : class
     {
         if (page < 1 || pageSize < 1)
             throw new ArgumentException("Page and pageSize must be greater than zero.");
@@ -33,15 +33,27 @@ public class HotelsController(ApplicationDbContext context) : ControllerBase
     {
         return await _context.Hotels.ToListAsync();
     }
+   
 
     [HttpGet("all-hotels")]
-    public async Task<ActionResult<PaginatedResponse<Hotel>>> GetAllHotels(
-        [FromQuery]int pageNumber,
-        [FromQuery]int pageSize)
+    public async Task<ActionResult<PaginatedResponse<HotelDto>>> GetAllHotels(
+     [FromQuery] int pageNumber,
+     [FromQuery] int pageSize)
     {
-        var bookings = await GetPaginatedData<Hotel>(pageNumber, pageSize, GetEntityQuery<Hotel>().OrderBy(t => t.Id));
+        var query = GetEntityQuery<Hotel>()
+        .OrderBy(h => h.Id)
+        .Select(h => new HotelDto
+        {
+            Id = h.Id,
+            Name = h.Name,
+            Location = h.Location,
+            ContactEmail = h.ContactEmail,
+            Website = h.Website
+        });
 
-        return Ok(bookings);
+        var hotels = await GetPaginatedData(pageNumber,pageSize, query);
+
+        return Ok(hotels);
     }
 
     [HttpGet("{id}")]
@@ -53,7 +65,7 @@ public class HotelsController(ApplicationDbContext context) : ControllerBase
         return hotel;
     }
     [HttpPost]
-    public async Task<ActionResult<Hotel>> PostHotel([FromBody] Hotel hotelDto)
+    public async Task<ActionResult<Hotel>> PostHotel([FromBody] HotelUpdate hotelDto)
     {
         if (hotelDto == null)
             return BadRequest("Invalid hotel data.");
