@@ -2,7 +2,6 @@
 using Microsoft.EntityFrameworkCore;
 using HotelManagementSystem.Server.Data;
 using HotelManagementSystem.Server.Models.Hotels;
-using Microsoft.AspNetCore.Http.HttpResults;
 
 namespace HotelManagementSystem.Server.Controllers;
 
