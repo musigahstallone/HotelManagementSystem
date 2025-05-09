@@ -13,8 +13,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace HotelManagementSystem.Server.Migrations;
 
 [DbContext(typeof(ApplicationDbContext))]
-[Migration("20250327131526_postgresql_migration_554")]
-partial class postgresql_migration_554
+[Migration("20250507204851_AddedAlotOfAuthStaff")]
+partial class AddedAlotOfAuthStaff
 {
     /// <inheritdoc />
     protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -39,6 +39,15 @@ partial class postgresql_migration_554
                 b.Property<string>("Name")
                     .IsRequired()
                     .HasColumnType("text");
+
+                b.Property<string>("OtpCode")
+                    .HasColumnType("text");
+
+                b.Property<DateOnly?>("OtpExpiryDate")
+                    .HasColumnType("date");
+
+                b.Property<TimeOnly?>("OtpExpiryTime")
+                    .HasColumnType("time without time zone");
 
                 b.Property<string>("PasswordHash")
                     .IsRequired()

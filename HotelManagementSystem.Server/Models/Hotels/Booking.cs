@@ -21,8 +21,8 @@ public class Booking
 
     private Booking(Guid userId, Guid roomId, DateOnly checkIn, DateOnly checkOut, decimal totalAmount)
     {
-        if (checkOut <= checkIn)
-            throw new ArgumentException("Check-out date must be after check-in date.");
+        //if ((checkOut.DayNumber - checkIn.DayNumber) < 2)
+        //    throw new ArgumentException("Check-out date must be at least 2 days after check-in date.");
 
         UserId = userId;
         RoomId = roomId;
@@ -31,8 +31,14 @@ public class Booking
         TotalAmount = totalAmount;
     }
 
-    public static Booking CreateNew(Guid userId, Guid roomId, DateOnly checkIn, DateOnly checkOut, decimal totalAmount)
+    public static Booking CreateNew(Guid userId, Guid roomId, DateOnly checkIn, DateOnly checkOut, decimal roomRate)
     {
+        //if ((checkOut.DayNumber - checkIn.DayNumber) < 2)
+        //    throw new ArgumentException("Check-out date must be at least 2 days after check-in date.");
+
+        var totalNights = checkOut.DayNumber - checkIn.DayNumber;
+        var totalAmount = roomRate * totalNights;
+
         return new Booking(userId, roomId, checkIn, checkOut, totalAmount);
     }
 

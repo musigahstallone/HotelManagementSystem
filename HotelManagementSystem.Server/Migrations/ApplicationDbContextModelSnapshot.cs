@@ -9,347 +9,355 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace HotelManagementSystem.Server.Migrations
+namespace HotelManagementSystem.Server.Migrations;
+
+[DbContext(typeof(ApplicationDbContext))]
+partial class ApplicationDbContextModelSnapshot : ModelSnapshot
 {
-    [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    protected override void BuildModel(ModelBuilder modelBuilder)
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
-        {
 #pragma warning disable 612, 618
-            modelBuilder
-                .HasAnnotation("ProductVersion", "9.0.2")
-                .HasAnnotation("Relational:MaxIdentifierLength", 63);
+        modelBuilder
+            .HasAnnotation("ProductVersion", "9.0.2")
+            .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
-            NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
+        NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
-            modelBuilder.Entity("HotelManagementSystem.Server.Models.Auth.User", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+        modelBuilder.Entity("HotelManagementSystem.Server.Models.Auth.User", b =>
+            {
+                b.Property<Guid>("Id")
+                    .ValueGeneratedOnAdd()
+                    .HasColumnType("uuid");
 
-                    b.Property<string>("Email")
-                        .IsRequired()
-                        .HasColumnType("text");
+                b.Property<string>("Email")
+                    .IsRequired()
+                    .HasColumnType("text");
 
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasColumnType("text");
+                b.Property<string>("Name")
+                    .IsRequired()
+                    .HasColumnType("text");
 
-                    b.Property<string>("PasswordHash")
-                        .IsRequired()
-                        .HasColumnType("text");
+                b.Property<string>("OtpCode")
+                    .HasColumnType("text");
 
-                    b.Property<int>("Role")
-                        .HasColumnType("integer");
+                b.Property<DateOnly?>("OtpExpiryDate")
+                    .HasColumnType("date");
 
-                    b.HasKey("Id");
+                b.Property<TimeOnly?>("OtpExpiryTime")
+                    .HasColumnType("time without time zone");
 
-                    b.HasIndex("Email")
-                        .IsUnique();
+                b.Property<string>("PasswordHash")
+                    .IsRequired()
+                    .HasColumnType("text");
 
-                    b.ToTable("Users");
-                });
+                b.Property<int>("Role")
+                    .HasColumnType("integer");
 
-            modelBuilder.Entity("HotelManagementSystem.Server.Models.Hotels.Booking", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                b.HasKey("Id");
 
-                    b.Property<DateTime?>("CancelledAt")
-                        .HasColumnType("timestamp with time zone");
+                b.HasIndex("Email")
+                    .IsUnique();
 
-                    b.Property<DateOnly>("CheckInDate")
-                        .HasColumnType("date");
+                b.ToTable("Users");
+            });
 
-                    b.Property<DateOnly>("CheckOutDate")
-                        .HasColumnType("date");
+        modelBuilder.Entity("HotelManagementSystem.Server.Models.Hotels.Booking", b =>
+            {
+                b.Property<Guid>("Id")
+                    .ValueGeneratedOnAdd()
+                    .HasColumnType("uuid");
 
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
+                b.Property<DateTime?>("CancelledAt")
+                    .HasColumnType("timestamp with time zone");
 
-                    b.Property<bool>("IsCancelled")
-                        .HasColumnType("boolean");
+                b.Property<DateOnly>("CheckInDate")
+                    .HasColumnType("date");
 
-                    b.Property<bool>("IsPaid")
-                        .HasColumnType("boolean");
+                b.Property<DateOnly>("CheckOutDate")
+                    .HasColumnType("date");
 
-                    b.Property<Guid>("RoomId")
-                        .HasColumnType("uuid");
+                b.Property<DateTime>("CreatedAt")
+                    .HasColumnType("timestamp with time zone");
 
-                    b.Property<decimal>("TotalAmount")
-                        .HasColumnType("numeric");
+                b.Property<bool>("IsCancelled")
+                    .HasColumnType("boolean");
 
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uuid");
+                b.Property<bool>("IsPaid")
+                    .HasColumnType("boolean");
 
-                    b.HasKey("Id");
+                b.Property<Guid>("RoomId")
+                    .HasColumnType("uuid");
 
-                    b.HasIndex("RoomId");
+                b.Property<decimal>("TotalAmount")
+                    .HasColumnType("numeric");
 
-                    b.HasIndex("UserId");
+                b.Property<Guid>("UserId")
+                    .HasColumnType("uuid");
 
-                    b.ToTable("Bookings");
-                });
+                b.HasKey("Id");
 
-            modelBuilder.Entity("HotelManagementSystem.Server.Models.Hotels.Hotel", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                b.HasIndex("RoomId");
 
-                    b.PrimitiveCollection<List<string>>("Amenities")
-                        .IsRequired()
-                        .HasColumnType("text[]");
+                b.HasIndex("UserId");
 
-                    b.Property<string>("ContactEmail")
-                        .IsRequired()
-                        .HasColumnType("text");
+                b.ToTable("Bookings");
+            });
 
-                    b.Property<string>("ContactPhone")
-                        .IsRequired()
-                        .HasColumnType("text");
+        modelBuilder.Entity("HotelManagementSystem.Server.Models.Hotels.Hotel", b =>
+            {
+                b.Property<Guid>("Id")
+                    .ValueGeneratedOnAdd()
+                    .HasColumnType("uuid");
 
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
+                b.PrimitiveCollection<List<string>>("Amenities")
+                    .IsRequired()
+                    .HasColumnType("text[]");
 
-                    b.Property<string>("Description")
-                        .IsRequired()
-                        .HasColumnType("text");
+                b.Property<string>("ContactEmail")
+                    .IsRequired()
+                    .HasColumnType("text");
 
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("boolean");
+                b.Property<string>("ContactPhone")
+                    .IsRequired()
+                    .HasColumnType("text");
 
-                    b.Property<string>("Location")
-                        .IsRequired()
-                        .HasColumnType("text");
+                b.Property<DateTime>("CreatedAt")
+                    .HasColumnType("timestamp with time zone");
 
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasColumnType("text");
+                b.Property<string>("Description")
+                    .IsRequired()
+                    .HasColumnType("text");
 
-                    b.PrimitiveCollection<List<string>>("Policies")
-                        .IsRequired()
-                        .HasColumnType("text[]");
+                b.Property<bool>("IsActive")
+                    .HasColumnType("boolean");
 
-                    b.Property<int>("StarRating")
-                        .HasColumnType("integer");
+                b.Property<string>("Location")
+                    .IsRequired()
+                    .HasColumnType("text");
 
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
+                b.Property<string>("Name")
+                    .IsRequired()
+                    .HasColumnType("text");
 
-                    b.Property<string>("Website")
-                        .IsRequired()
-                        .HasColumnType("text");
+                b.PrimitiveCollection<List<string>>("Policies")
+                    .IsRequired()
+                    .HasColumnType("text[]");
 
-                    b.HasKey("Id");
+                b.Property<int>("StarRating")
+                    .HasColumnType("integer");
 
-                    b.HasIndex("Name")
-                        .IsUnique();
+                b.Property<DateTime>("UpdatedAt")
+                    .HasColumnType("timestamp with time zone");
 
-                    b.ToTable("Hotels");
-                });
+                b.Property<string>("Website")
+                    .IsRequired()
+                    .HasColumnType("text");
 
-            modelBuilder.Entity("HotelManagementSystem.Server.Models.Hotels.Payment", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                b.HasKey("Id");
 
-                    b.Property<decimal>("Amount")
-                        .HasColumnType("numeric");
+                b.HasIndex("Name")
+                    .IsUnique();
 
-                    b.Property<Guid>("BookingId")
-                        .HasColumnType("uuid");
+                b.ToTable("Hotels");
+            });
 
-                    b.Property<DateOnly>("PaymentDate")
-                        .HasColumnType("date");
+        modelBuilder.Entity("HotelManagementSystem.Server.Models.Hotels.Payment", b =>
+            {
+                b.Property<Guid>("Id")
+                    .ValueGeneratedOnAdd()
+                    .HasColumnType("uuid");
 
-                    b.Property<int>("Status")
-                        .HasColumnType("integer");
+                b.Property<decimal>("Amount")
+                    .HasColumnType("numeric");
 
-                    b.HasKey("Id");
+                b.Property<Guid>("BookingId")
+                    .HasColumnType("uuid");
 
-                    b.HasIndex("BookingId");
+                b.Property<DateOnly>("PaymentDate")
+                    .HasColumnType("date");
 
-                    b.ToTable("Payment");
-                });
+                b.Property<int>("Status")
+                    .HasColumnType("integer");
 
-            modelBuilder.Entity("HotelManagementSystem.Server.Models.Hotels.Review", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                b.HasKey("Id");
 
-                    b.Property<string>("Comment")
-                        .IsRequired()
-                        .HasColumnType("text");
+                b.HasIndex("BookingId");
 
-                    b.Property<Guid>("HotelId")
-                        .HasColumnType("uuid");
+                b.ToTable("Payment");
+            });
 
-                    b.Property<int>("Rating")
-                        .HasColumnType("integer");
+        modelBuilder.Entity("HotelManagementSystem.Server.Models.Hotels.Review", b =>
+            {
+                b.Property<Guid>("Id")
+                    .ValueGeneratedOnAdd()
+                    .HasColumnType("uuid");
 
-                    b.Property<DateTime>("ReviewDate")
-                        .HasColumnType("timestamp with time zone");
+                b.Property<string>("Comment")
+                    .IsRequired()
+                    .HasColumnType("text");
 
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uuid");
+                b.Property<Guid>("HotelId")
+                    .HasColumnType("uuid");
 
-                    b.HasKey("Id");
+                b.Property<int>("Rating")
+                    .HasColumnType("integer");
 
-                    b.HasIndex("HotelId");
+                b.Property<DateTime>("ReviewDate")
+                    .HasColumnType("timestamp with time zone");
 
-                    b.HasIndex("UserId");
+                b.Property<Guid>("UserId")
+                    .HasColumnType("uuid");
 
-                    b.ToTable("Review");
-                });
+                b.HasKey("Id");
 
-            modelBuilder.Entity("HotelManagementSystem.Server.Models.Hotels.Room", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                b.HasIndex("HotelId");
 
-                    b.Property<int>("Capacity")
-                        .HasColumnType("integer");
+                b.HasIndex("UserId");
 
-                    b.Property<Guid>("HotelId")
-                        .HasColumnType("uuid");
+                b.ToTable("Review");
+            });
 
-                    b.Property<bool>("IsAvailable")
-                        .HasColumnType("boolean");
+        modelBuilder.Entity("HotelManagementSystem.Server.Models.Hotels.Room", b =>
+            {
+                b.Property<Guid>("Id")
+                    .ValueGeneratedOnAdd()
+                    .HasColumnType("uuid");
 
-                    b.Property<decimal>("PricePerNight")
-                        .HasColumnType("decimal(18,2)");
+                b.Property<int>("Capacity")
+                    .HasColumnType("integer");
 
-                    b.Property<string>("RoomNumber")
-                        .IsRequired()
-                        .HasColumnType("text");
+                b.Property<Guid>("HotelId")
+                    .HasColumnType("uuid");
 
-                    b.Property<int>("Type")
-                        .HasColumnType("integer");
+                b.Property<bool>("IsAvailable")
+                    .HasColumnType("boolean");
 
-                    b.HasKey("Id");
+                b.Property<decimal>("PricePerNight")
+                    .HasColumnType("decimal(18,2)");
 
-                    b.HasIndex("HotelId");
+                b.Property<string>("RoomNumber")
+                    .IsRequired()
+                    .HasColumnType("text");
 
-                    b.ToTable("Rooms");
-                });
+                b.Property<int>("Type")
+                    .HasColumnType("integer");
 
-            modelBuilder.Entity("HotelManagementSystem.Server.Models.Todo.Todo", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                b.HasKey("Id");
 
-                    b.Property<DateOnly?>("CompletedDate")
-                        .HasColumnType("date");
+                b.HasIndex("HotelId");
 
-                    b.Property<TimeOnly?>("CompletedTime")
-                        .HasColumnType("time");
+                b.ToTable("Rooms");
+            });
 
-                    b.Property<DateOnly>("CreatedDate")
-                        .HasColumnType("date");
+        modelBuilder.Entity("HotelManagementSystem.Server.Models.Todo.Todo", b =>
+            {
+                b.Property<Guid>("Id")
+                    .ValueGeneratedOnAdd()
+                    .HasColumnType("uuid");
 
-                    b.Property<TimeOnly>("CreatedTime")
-                        .HasColumnType("time");
+                b.Property<DateOnly?>("CompletedDate")
+                    .HasColumnType("date");
 
-                    b.Property<DateOnly?>("DueDate")
-                        .HasColumnType("date");
+                b.Property<TimeOnly?>("CompletedTime")
+                    .HasColumnType("time");
 
-                    b.Property<bool>("IsArchived")
-                        .HasColumnType("boolean");
+                b.Property<DateOnly>("CreatedDate")
+                    .HasColumnType("date");
 
-                    b.Property<bool>("IsCompleted")
-                        .HasColumnType("boolean");
+                b.Property<TimeOnly>("CreatedTime")
+                    .HasColumnType("time");
 
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("boolean");
+                b.Property<DateOnly?>("DueDate")
+                    .HasColumnType("date");
 
-                    b.Property<string>("Note")
-                        .HasColumnType("text");
+                b.Property<bool>("IsArchived")
+                    .HasColumnType("boolean");
 
-                    b.HasKey("Id");
+                b.Property<bool>("IsCompleted")
+                    .HasColumnType("boolean");
 
-                    b.HasIndex("Note");
+                b.Property<bool>("IsDeleted")
+                    .HasColumnType("boolean");
 
-                    b.ToTable("Todos");
-                });
+                b.Property<string>("Note")
+                    .HasColumnType("text");
 
-            modelBuilder.Entity("HotelManagementSystem.Server.Models.Hotels.Booking", b =>
-                {
-                    b.HasOne("HotelManagementSystem.Server.Models.Hotels.Room", "Room")
-                        .WithMany("Bookings")
-                        .HasForeignKey("RoomId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                b.HasKey("Id");
 
-                    b.HasOne("HotelManagementSystem.Server.Models.Auth.User", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                b.HasIndex("Note");
 
-                    b.Navigation("Room");
+                b.ToTable("Todos");
+            });
 
-                    b.Navigation("User");
-                });
+        modelBuilder.Entity("HotelManagementSystem.Server.Models.Hotels.Booking", b =>
+            {
+                b.HasOne("HotelManagementSystem.Server.Models.Hotels.Room", "Room")
+                    .WithMany("Bookings")
+                    .HasForeignKey("RoomId")
+                    .OnDelete(DeleteBehavior.Cascade)
+                    .IsRequired();
 
-            modelBuilder.Entity("HotelManagementSystem.Server.Models.Hotels.Payment", b =>
-                {
-                    b.HasOne("HotelManagementSystem.Server.Models.Hotels.Booking", "Booking")
-                        .WithMany()
-                        .HasForeignKey("BookingId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                b.HasOne("HotelManagementSystem.Server.Models.Auth.User", "User")
+                    .WithMany()
+                    .HasForeignKey("UserId")
+                    .OnDelete(DeleteBehavior.Cascade)
+                    .IsRequired();
 
-                    b.Navigation("Booking");
-                });
+                b.Navigation("Room");
 
-            modelBuilder.Entity("HotelManagementSystem.Server.Models.Hotels.Review", b =>
-                {
-                    b.HasOne("HotelManagementSystem.Server.Models.Hotels.Hotel", "Hotel")
-                        .WithMany()
-                        .HasForeignKey("HotelId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                b.Navigation("User");
+            });
 
-                    b.HasOne("HotelManagementSystem.Server.Models.Auth.User", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+        modelBuilder.Entity("HotelManagementSystem.Server.Models.Hotels.Payment", b =>
+            {
+                b.HasOne("HotelManagementSystem.Server.Models.Hotels.Booking", "Booking")
+                    .WithMany()
+                    .HasForeignKey("BookingId")
+                    .OnDelete(DeleteBehavior.Cascade)
+                    .IsRequired();
 
-                    b.Navigation("Hotel");
+                b.Navigation("Booking");
+            });
 
-                    b.Navigation("User");
-                });
+        modelBuilder.Entity("HotelManagementSystem.Server.Models.Hotels.Review", b =>
+            {
+                b.HasOne("HotelManagementSystem.Server.Models.Hotels.Hotel", "Hotel")
+                    .WithMany()
+                    .HasForeignKey("HotelId")
+                    .OnDelete(DeleteBehavior.Cascade)
+                    .IsRequired();
 
-            modelBuilder.Entity("HotelManagementSystem.Server.Models.Hotels.Room", b =>
-                {
-                    b.HasOne("HotelManagementSystem.Server.Models.Hotels.Hotel", "Hotel")
-                        .WithMany("Rooms")
-                        .HasForeignKey("HotelId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                b.HasOne("HotelManagementSystem.Server.Models.Auth.User", "User")
+                    .WithMany()
+                    .HasForeignKey("UserId")
+                    .OnDelete(DeleteBehavior.Cascade)
+                    .IsRequired();
 
-                    b.Navigation("Hotel");
-                });
+                b.Navigation("Hotel");
 
-            modelBuilder.Entity("HotelManagementSystem.Server.Models.Hotels.Hotel", b =>
-                {
-                    b.Navigation("Rooms");
-                });
+                b.Navigation("User");
+            });
 
-            modelBuilder.Entity("HotelManagementSystem.Server.Models.Hotels.Room", b =>
-                {
-                    b.Navigation("Bookings");
-                });
+        modelBuilder.Entity("HotelManagementSystem.Server.Models.Hotels.Room", b =>
+            {
+                b.HasOne("HotelManagementSystem.Server.Models.Hotels.Hotel", "Hotel")
+                    .WithMany("Rooms")
+                    .HasForeignKey("HotelId")
+                    .OnDelete(DeleteBehavior.Cascade)
+                    .IsRequired();
+
+                b.Navigation("Hotel");
+            });
+
+        modelBuilder.Entity("HotelManagementSystem.Server.Models.Hotels.Hotel", b =>
+            {
+                b.Navigation("Rooms");
+            });
+
+        modelBuilder.Entity("HotelManagementSystem.Server.Models.Hotels.Room", b =>
+            {
+                b.Navigation("Bookings");
+            });
 #pragma warning restore 612, 618
-        }
     }
 }

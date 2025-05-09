@@ -24,7 +24,7 @@ public class HotelsController(ApplicationDbContext context) : ControllerBase
             .Take(pageSize)
             .ToListAsync();
 
-        return new PaginatedResponse<T>(items, totalCount, pageSize, page);
+        return new PaginatedResponse<T>(items, page, pageSize, totalCount);
     }
 
     /*public async Task<ActionResult<IEnumerable<Hotel>>> GetHotels() => await _context.Hotels.ToListAsync(); //[HttpGet("all-hotels")]*/
@@ -58,6 +58,17 @@ public class HotelsController(ApplicationDbContext context) : ControllerBase
 
         return hotel;
     }
+
+    [HttpGet("search")]
+    public async Task<IActionResult> SearchHotels([FromQuery] string query)
+    {
+        var hotels = await _context.Hotels
+            .Where(h => h.Name.Contains(query) || h.Location.Contains(query))
+            .ToListAsync();
+
+        return Ok(hotels);
+    }
+
     [HttpPost]
     public async Task<ActionResult<Hotel>> PostHotel([FromBody] HotelUpdate hotelDto)
     {

@@ -2,21 +2,20 @@
 
 #nullable disable
 
-namespace HotelManagementSystem.Server.Migrations
+namespace HotelManagementSystem.Server.Migrations;
+
+/// <inheritdoc />
+public partial class postgresql_migration_491 : Migration
 {
     /// <inheritdoc />
-    public partial class postgresql_migration_491 : Migration
+    protected override void Up(MigrationBuilder migrationBuilder)
     {
-        /// <inheritdoc />
-        protected override void Up(MigrationBuilder migrationBuilder)
-        {
 
-        }
+    }
 
-        /// <inheritdoc />
-        protected override void Down(MigrationBuilder migrationBuilder)
-        {
+    /// <inheritdoc />
+    protected override void Down(MigrationBuilder migrationBuilder)
+    {
 
-        }
     }
 }

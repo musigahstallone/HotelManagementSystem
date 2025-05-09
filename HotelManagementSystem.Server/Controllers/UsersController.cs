@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using HotelManagementSystem.Server.Data;
 using HotelManagementSystem.Server.Models.Auth;
@@ -7,42 +8,37 @@ namespace HotelManagementSystem.Server.Controllers;
 
 [Route("api/[controller]")]
 [ApiController]
+//[Authorize(Roles = "Admin,Manager")] // 👈 restrict access
 public class UsersController(ApplicationDbContext context) : ControllerBase
 {
     private readonly ApplicationDbContext _context = context;
 
     // GET: api/Users
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<User>>> GetUsers()
+    public async Task<ActionResult<IEnumerable<UserDto>>> GetUsers()
     {
-        return await _context.Users.ToListAsync();
+        var users = await _context.Users.ToListAsync();
+        return users.Select(u => u.ToDto()).ToList();
     }
 
-    // GET: api/Users/5
+    // GET: api/Users/{id}
     [HttpGet("{id}")]
-    public async Task<ActionResult<User>> GetUser(Guid id)
+    public async Task<ActionResult<UserDto>> GetUser(Guid id)
     {
         var user = await _context.Users.FindAsync(id);
-
-        if (user == null)
-        {
-            return NotFound();
-        }
-
-        return user;
+        if (user is null) return NotFound();
+        return user.ToDto();
     }
 
-    // PUT: api/Users/5
-    // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
+    // PUT: api/Users/{id}
     [HttpPut("{id}")]
-    public async Task<IActionResult> PutUser(Guid id, User user)
+    public async Task<IActionResult> UpdateUserRole(Guid id, [FromBody] UpdateUserRoleDto dto)
     {
-        if (id != user.Id)
-        {
-            return BadRequest();
-        }
+        var user = await _context.Users.FindAsync(id);
+        if (user is null) return NotFound();
 
-        _context.Entry(user).State = EntityState.Modified;
+        var updated = user.UpdateRole(dto.Role);
+        _context.Entry(updated).State = EntityState.Modified;
 
         try
         {
@@ -50,39 +46,19 @@ public class UsersController(ApplicationDbContext context) : ControllerBase
         }
         catch (DbUpdateConcurrencyException)
         {
-            if (!UserExists(id))
-            {
-                return NotFound();
-            }
-            else
-            {
-                throw;
-            }
+            return StatusCode(500, "Error updating user role.");
         }
 
         return NoContent();
     }
 
-    // POST: api/Users
-    // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
-    [HttpPost]
-    public async Task<ActionResult<User>> PostUser(User user)
-    {
-        _context.Users.Add(user);
-        await _context.SaveChangesAsync();
-
-        return CreatedAtAction("GetUser", new { id = user.Id }, user);
-    }
-
-    // DELETE: api/Users/5
+    // DELETE: api/Users/{id}
     [HttpDelete("{id}")]
+    [Authorize(Roles = "Admin")] // Only Admins can delete users
     public async Task<IActionResult> DeleteUser(Guid id)
     {
         var user = await _context.Users.FindAsync(id);
-        if (user == null)
-        {
-            return NotFound();
-        }
+        if (user is null) return NotFound();
 
         _context.Users.Remove(user);
         await _context.SaveChangesAsync();
@@ -90,8 +66,5 @@ public class UsersController(ApplicationDbContext context) : ControllerBase
         return NoContent();
     }
 
-    private bool UserExists(Guid id)
-    {
-        return _context.Users.Any(e => e.Id == id);
-    }
+    private bool UserExists(Guid id) => _context.Users.Any(u => u.Id == id);
 }

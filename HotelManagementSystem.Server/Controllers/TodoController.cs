@@ -5,7 +5,7 @@ using HotelManagementSystem.Server.Models.Hotels;
 using HotelManagementSystem.Server.Models.Todo;
 using HotelManagementSystem.Server.Models.Auth;
 namespace HotelManagementSystem.Server.Controllers;
-
+/*
 [Route("api/todos")]
 [ApiController]
 public class TodoController(ApplicationDbContext context) : ControllerBase
@@ -209,3 +209,4 @@ public class TodoController(ApplicationDbContext context) : ControllerBase
         return Ok(ApiResponse<Todo>.SuccessResponse(todo, "Todo marked as not completed"));
     }
 }
+*/

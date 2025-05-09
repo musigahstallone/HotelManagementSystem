@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using HotelManagementSystem.Server.Data;
 using HotelManagementSystem.Server.Models.Hotels;
 using Microsoft.AspNetCore.Http.HttpResults;
+using Humanizer;
 
 namespace HotelManagementSystem.Server.Controllers;
 
@@ -29,36 +30,60 @@ public class BookingsController(ApplicationDbContext context) : ControllerBase
     }
 
 
-    [HttpGet]
-    public async Task<ActionResult<PaginatedResponse<Booking>>> GetBookings(
-       [FromQuery] int page = 1,
-       [FromQuery] int pageSize = 10)
-    {
-        var totalCount = await _context.Bookings.CountAsync();
-        var items = await _context.Bookings
-            .OrderBy(t => t.Id)
-            .Skip((page - 1) * pageSize)
-            .Take(pageSize)
-            .ToListAsync();
 
-        return Ok(new PaginatedResponse<Booking>(items, page, pageSize, totalCount));
+    [HttpGet]
+    public async Task<ActionResult<PaginatedResponse<BookingDetailsDto>>> GetBookings(
+   [FromQuery] int page = 1,
+   [FromQuery] int pageSize = 10)
+    {
+        var query = _context.Bookings
+            .Include(b => b.User)
+            .Include(b => b.Room)
+            .ThenInclude(r => r.Hotel)
+            .OrderBy(b => b.Id)
+            .Select(b => new BookingDetailsDto
+            {
+                Id = b.Id,
+                UserName = b.User.Name,
+                RoomName = b.Room.RoomNumber,
+                HotelName = b.Room.Hotel.Name,
+                CheckInDate = b.CheckInDate,
+                CheckOutDate = b.CheckOutDate,
+                TotalAmount = b.TotalAmount,
+                IsPaid = b.IsPaid
+            });
+
+        return Ok(await GetPaginatedData(page, pageSize, query));
     }
+
 
     [HttpGet("all-bookings")]
-    public async Task<ActionResult<Booking>> GetPagedBookings([FromQuery]int pageSize, [FromQuery]int pageNumber)
+    public async Task<ActionResult<PaginatedResponse<BookingDetailsDto>>> GetPagedBookings(
+      [FromQuery] int pageSize,
+      [FromQuery] int pageNumber)
     {
-        //var bookings = await _context.Bookings
-        //    .Skip((pageNumber - 1) * pageSize)
-        //    .Take(pageSize)
-        //    .ToListAsync();
+        var query = GetEntityQuery<Booking>()
+            .Include(b => b.User)
+            .Include(b => b.Room)
+            .ThenInclude(r => r.Hotel)
+            .OrderBy(b => b.Id)
+            .Select(b => new BookingDetailsDto
+            {
+                Id = b.Id,
+                UserName = b.User.Name,
+                RoomName = b.Room.RoomNumber,
+                HotelName = b.Room.Hotel.Name,
+                CheckInDate = b.CheckInDate,
+                CheckOutDate = b.CheckOutDate,
+                TotalAmount = b.TotalAmount,
+                IsPaid = b.IsPaid
+            });
 
-        var bookings = await GetPaginatedData(pageNumber, pageSize, GetEntityQuery<Booking>().OrderBy(t => t.Id));
-
-        return Ok(bookings);
-
+        return Ok(await GetPaginatedData(pageNumber, pageSize, query));
     }
 
-    [HttpGet("summary")]
+
+    /*[HttpGet("summary")]
     public async Task<ActionResult<string>> GetBookingSummary(Guid id)
     {
         var booking = await _context.Bookings.FindAsync(id);
@@ -68,8 +93,55 @@ public class BookingsController(ApplicationDbContext context) : ControllerBase
         }
 
         return Ok(booking.ToString());
+    }*/
+
+    [HttpGet("summary")]
+    public async Task<ActionResult<string>> GetBookingSummary(Guid id)
+    {
+        // eagerly load User, Room and Hotel
+        var booking = await _context.Bookings
+            .Include(b => b.User)
+            .Include(b => b.Room!)
+                .ThenInclude(r => r.Hotel)
+            .FirstOrDefaultAsync(b => b.Id == id);
+
+        if (booking == null)
+            return NotFound("Booking not found.");
+
+        // guard against missing navigation (shouldn’t happen if your FK’s are intact)
+        var userName = booking.User?.Name ?? "[unknown user]";
+        var roomNum = booking.Room?.RoomNumber ?? "[unknown room]";
+        var hotelName = booking.Room?.Hotel?.Name ?? "[unknown hotel]";
+
+        var paidText = booking.IsPaid ? "Paid" : "Not paid";
+        var cancelledText = booking.IsCancelled ? "Cancelled" : "Active";
+
+        var summary =
+            $"Booking:   {userName} in room {roomNum} at {hotelName}.\n" +
+            $"Check‑in:   {booking.CheckInDate:yyyy‑MM‑dd}\n" +
+            $"Check‑out:   {booking.CheckOutDate:yyyy‑MM‑dd}\n" +
+            $"Nights:   {booking.GetTotalNights()}\n" +
+            $"Amount:   {booking.TotalAmount:C}\n" +
+            $"Status:   {paidText}, {cancelledText}";
+
+        return Ok(summary);
     }
 
+    // GET: api/Bookings/user/{userId}
+    [HttpGet("user/{userId}")]
+    public async Task<IActionResult> GetUserBookings(Guid userId)
+    {
+        var bookings = await _context.Bookings
+            .Where(b => b.UserId == userId)
+            .Include(b => b.Room)
+            .Include(b => b.Room.Hotel)
+            .ToListAsync();
+
+        if (bookings.Count == 0)
+            return NotFound("No bookings found for the user.");
+
+        return Ok(bookings);
+    }
     [HttpGet("{id}")]
     public async Task<ActionResult<Booking>> GetBooking(Guid id)
     {
@@ -78,24 +150,50 @@ public class BookingsController(ApplicationDbContext context) : ControllerBase
         return booking;
     }
 
-    [HttpPost]
+    [HttpPost("create-booking")]
     public async Task<ActionResult<Booking>> CreateBooking([FromBody] BookingRequest request)
     {
-        if (request.CheckOutDate <= request.CheckInDate)
-            return BadRequest("Check-out date must be after check-in date.");
+        var currentDate = DateOnly.FromDateTime(DateTime.UtcNow);
 
-        var userExists = await _context.Users.AnyAsync(u => u.Id == request.UserId);
-        if (!userExists) return NotFound("User not found.");
+        // Validation: Check-in must be today or later
+        if (request.CheckInDate < currentDate)
+            return BadRequest("Check-in date cannot be in the past.");
 
-        var roomExists = await _context.Rooms.AnyAsync(r => r.Id == request.RoomId);
-        if (!roomExists) return NotFound("Room not found.");
+        // Validation: Check-in must be before check-out
+        if (request.CheckInDate >= request.CheckOutDate)
+            return BadRequest("Check-in date must be before check-out date.");
 
-        var booking = Booking.CreateNew(request.UserId, request.RoomId, request.CheckInDate, request.CheckOutDate, request.TotalAmount);
+        // Validation: Minimum stay should be at least 2 days
+        if ((request.CheckOutDate.DayNumber - request.CheckInDate.DayNumber) < 2)
+            return BadRequest("Check-out date must be at least 2 days after check-in date.");
+
+        var user = await _context.Users.FindAsync(request.UserId);
+        if (user == null)
+            return NotFound("User not found.");
+
+        var room = await _context.Rooms.FindAsync(request.RoomId);
+        if (room == null)
+            return NotFound("Room not found.");
+
+        var booking = Booking.CreateNew(request.UserId, request.RoomId, request.CheckInDate, request.CheckOutDate, room.PricePerNight);
 
         _context.Bookings.Add(booking);
         await _context.SaveChangesAsync();
+     
+        var dto = new BookingDetailsDto
+        {
+            Id = booking.Id,
+            UserName = user.Name,
+            RoomName = room.RoomNumber,
+            HotelName = room.Hotel?.Name,
+            CheckInDate = booking.CheckInDate,
+            CheckOutDate = booking.CheckOutDate,
+            TotalAmount = booking.TotalAmount,
+            IsPaid = booking.IsPaid
+        };
 
-        return CreatedAtAction(nameof(GetBooking), new { id = booking.Id }, booking);
+        return CreatedAtAction(nameof(GetBooking), new { id = dto.Id }, dto);
+
     }
 
     [HttpPut("{id}/mark-paid")]
