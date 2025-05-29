@@ -5,7 +5,7 @@ public class User
     public string Name { get; private set; } = string.Empty;
     public string Email { get; private set; } = string.Empty;
     public string PasswordHash { get; private set; } = string.Empty;
-    public UserRole Role { get; private set; }
+    public UserRole Role { get; private set; } = UserRole.Customer;
     public string? OtpCode { get; private set; }
     public DateOnly? OtpExpiryDate { get; private set; }
     public TimeOnly? OtpExpiryTime { get; private set; }
@@ -35,7 +35,6 @@ public class User
     public void SetOtp(string code, DateTime expiry)
     {
         OtpCode = code;
-        // split the incoming DateTime into date + time
         OtpExpiryDate = DateOnly.FromDateTime(expiry);
         OtpExpiryTime = TimeOnly.FromDateTime(expiry);
     }
@@ -45,7 +44,6 @@ public class User
         if (OtpCode != code || OtpExpiryDate == null || OtpExpiryTime == null)
             return false;
 
-        // rebuild a DateTime to compare
         var expiry = OtpExpiryDate.Value.ToDateTime(OtpExpiryTime.Value);
         return expiry > DateTime.UtcNow;
     }
@@ -70,8 +68,7 @@ public enum UserRole
     Staff,
     Supervisor,
     Receptionist,
-    Accountant,
-    // …any others you need
+    Accountant
 }
 
 public record UserDto(

@@ -1,7 +1,8 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using HotelManagementSystem.Server.Data;
+﻿using HotelManagementSystem.Server.Data;
 using HotelManagementSystem.Server.Models.Auth;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using System.Composition;
 
 namespace HotelManagementSystem.Server.Controllers;
 
@@ -39,27 +40,31 @@ public class AuthController(ApplicationDbContext context, TokenService tokenServ
     public async Task<IActionResult> ForgotPassword(ForgotPasswordDto dto)
     {
         var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == dto.Email);
-        if (user == null) return Ok(new {message = "User doesn't exist!. Try a different email"});
+        if (user == null) return Ok(new { message = "User doesn't exist!. Try a different email" });
 
         var otp = new Random().Next(100000, 999999).ToString();
-        user.SetOtp(otp, DateTime.UtcNow.AddMinutes(10));
+        var expiry = DateTime.UtcNow.AddMinutes(10);
+        user.SetOtp(otp, expiry);
 
         await _context.SaveChangesAsync();
 
         // TODO: Send OTP via email
-        return Ok(new { OTP = otp, message = "OTP sent" });
+        return Ok(new
+        {
+            OTP = otp,
+            message = "OTP sent",
+            OtpExpiryDate = user.OtpExpiryDate,
+            OtpExpiryTime = user.OtpExpiryTime
+        });
     }
 
     [HttpPost("reset-password")]
     public async Task<IActionResult> ResetPassword(ResetPasswordDto dto)
     {
-        var user = await _context.Users
-                       .FirstOrDefaultAsync(u => u.Email == dto.Email);
+        var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == dto.Email);
         if (user == null) return BadRequest(new { message = "User doesn't exist!. Try a different email" });
 
-        // here dto carries separate date & time:
-        var expiryDateTime = dto.ExpiryDate.ToDateTime(dto.ExpiryTime);
-        if (!user.VerifyOtp(dto.Otp) || expiryDateTime < DateTime.UtcNow)
+        if (!user.VerifyOtp(dto.Otp))
             return BadRequest("Invalid or expired OTP");
 
         user.UpdatePassword(dto.NewPassword);

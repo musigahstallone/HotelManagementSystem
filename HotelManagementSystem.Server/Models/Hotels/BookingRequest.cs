@@ -30,4 +30,28 @@ public class BookingDetailsDto
     public DateOnly CheckOutDate { get; init; }
     public decimal TotalAmount { get; init; }
     public bool IsPaid { get; init; }
+
+    public static BookingDetailsDto FromEntity(Booking b) => new()
+    {
+        Id = b.Id,
+        UserName = b.User?.Name ?? "[unknown user]",
+        RoomName = b.Room?.RoomNumber ?? "[unknown room]",
+        HotelName = b.Room?.Hotel?.Name ?? "[unknown hotel]",
+        CheckInDate = b.CheckInDate,
+        CheckOutDate = b.CheckOutDate,
+        TotalAmount = b.TotalAmount,
+        IsPaid = b.IsPaid
+    };
+}
+
+public class ExtendBookingRequest
+{
+    public DateOnly NewCheckOutDate { get; set; }
+    public decimal AdditionalAmount { get; set; }
+}
+
+public class ChangeBookingDatesRequest
+{
+    public DateOnly NewCheckIn { get; set; }
+    public DateOnly NewCheckOut { get; set; }
 }

@@ -1,4 +1,6 @@
-﻿namespace HotelManagementSystem.Server.Models.Hotels;
+﻿using System.Text.Json.Serialization;
+
+namespace HotelManagementSystem.Server.Models.Hotels;
 
 public class Room
 {
@@ -7,11 +9,13 @@ public class Room
     public decimal PricePerNight { get; private set; }
     public bool IsAvailable { get; private set; } = true;
     public Guid HotelId { get; private set; }
+
+    [JsonIgnore]
     public Hotel Hotel { get; private set; } = null!;
     public int Capacity { get; private set; }
     public RoomType Type { get; private set; }
 
-    private readonly List<Booking> _bookings = new();
+    private readonly List<Booking> _bookings = [];
     public IReadOnlyList<Booking> Bookings => _bookings.AsReadOnly();
 
     private Room() { }

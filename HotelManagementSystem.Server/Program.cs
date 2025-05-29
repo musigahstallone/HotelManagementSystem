@@ -8,12 +8,25 @@ using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// DB Connection
 var connectionString = builder.Configuration.GetConnectionString("DatabaseConnection")
-                       ?? throw new InvalidOperationException("Database connection string not found!");
-
+    ?? throw new InvalidOperationException("Database connection string not found!");
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
 {
     options.UseNpgsql(connectionString);
+});
+
+//  Define a named CORS policy
+var allowedOrigins = builder.Configuration.GetSection("AllowedOrigins").Get<string[]>();
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("CorsPolicy", builder =>
+    {
+        builder.WithOrigins(allowedOrigins ?? ["http://localhost:3000"]) // Angular default
+               .AllowAnyHeader()
+               .AllowAnyMethod()
+               .AllowCredentials(); // Optional: use only if sending cookies or auth headers
+    });
 });
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -36,12 +49,14 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 builder.Services.AddAuthorizationBuilder()
     .AddPolicy("RequireAdminRole", policy => policy.RequireRole("Admin"))
+    .AddPolicy("RequireSecretaryRole", policy => policy.RequireRole("Secretary"))
     .AddPolicy("RequireManagerOrAdmin", policy => policy.RequireRole("Admin", "Manager"));
 
 builder.Services.AddSingleton<TokenService>();
-
 builder.Services.AddMemoryCache();
+
 builder.Services.AddControllers();
+
 builder.Services.AddOpenApi();
 builder.Services.AddSwaggerGen(options =>
 {
@@ -57,52 +72,50 @@ builder.Services.AddSwaggerGen(options =>
             Url = new Uri("https://mdeluxe.com")
         }
     });
-});
 
-/*builder.Services.AddSwaggerGen(options =>
-{
-    options.SwaggerDoc("v1", new() { Title = "HotelManagementSystem API", Version = "v1" });
-
-    // ?? Enable JWT auth in Swagger
-    options.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+    // Optional: Add JWT Auth support in Swagger
+    options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
         Name = "Authorization",
-        Type = Microsoft.OpenApi.Models.SecuritySchemeType.Http,
+        Type = SecuritySchemeType.Http,
         Scheme = "Bearer",
         BearerFormat = "JWT",
-        In = Microsoft.OpenApi.Models.ParameterLocation.Header,
+        In = ParameterLocation.Header,
         Description = "Enter 'Bearer {your token}'"
     });
 
-    options.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
+    options.AddSecurityRequirement(new OpenApiSecurityRequirement
     {
         {
-            new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+            new OpenApiSecurityScheme
             {
-                Reference = new Microsoft.OpenApi.Models.OpenApiReference
+                Reference = new OpenApiReference
                 {
-                    Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
+                    Type = ReferenceType.SecurityScheme,
                     Id = "Bearer"
                 }
             },
             Array.Empty<string>()
         }
     });
-});*/
+});
 
 var app = builder.Build();
+
+// Use CORS with named policy
+app.UseCors("CorsPolicy");
 
 app.UseDefaultFiles();
 app.MapStaticAssets();
 
-//if (app.Environment.IsDevelopment()){
 app.MapOpenApi();
-
 app.UseSwagger();
 app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "Hotel Booking API v1"));
 
 app.UseHttpsRedirection();
+app.UseAuthentication(); // Ensure this is added before Authorization
 app.UseAuthorization();
+
 app.MapControllers();
 app.MapFallbackToFile("/index.html");
 

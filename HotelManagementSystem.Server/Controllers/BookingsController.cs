@@ -1,113 +1,82 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using HotelManagementSystem.Server.Data;
+﻿using HotelManagementSystem.Server.Data;
 using HotelManagementSystem.Server.Models.Hotels;
-using Microsoft.AspNetCore.Http.HttpResults;
-using Humanizer;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace HotelManagementSystem.Server.Controllers;
 
-[Route("api/[controller]")]
 [ApiController]
-public class BookingsController(ApplicationDbContext context) : ControllerBase
+[Route("api/[controller]")]
+public class BookingsController(ApplicationDbContext context, ILogger<BookingsController> logger) : ControllerBase
 {
     private readonly ApplicationDbContext _context = context;
+    private readonly ILogger<BookingsController> _logger = logger;
 
-    public IQueryable<T> GetEntityQuery<T>() where T: class => _context.Set<T>().AsQueryable();
+    private IQueryable<T> Query<T>() where T : class => _context.Set<T>().AsNoTracking();
 
-    public static async Task<PaginatedResponse<T>> GetPaginatedData<T>(int page, int pageSize, IQueryable<T> query)
+    private static async Task<PaginatedResponse<T>> PaginateAsync<T>(IQueryable<T> query, int page, int pageSize)
     {
         if (page < 1 || pageSize < 1)
             throw new ArgumentException("Page and pageSize must be greater than zero.");
 
-        var totalCount = await query.CountAsync();
-        var items = await query
-            .Skip((page - 1) * pageSize)
-            .Take(pageSize)
-            .ToListAsync();
+        var total = await query.CountAsync();
+        var items = await query.Skip((page - 1) * pageSize).Take(pageSize).ToListAsync();
 
-        return new PaginatedResponse<T>(items, page, pageSize, totalCount);
+        return new PaginatedResponse<T>(items, page, pageSize, total);
     }
-
-
 
     [HttpGet]
-    public async Task<ActionResult<PaginatedResponse<BookingDetailsDto>>> GetBookings(
-   [FromQuery] int page = 1,
-   [FromQuery] int pageSize = 10)
+    public async Task<ActionResult<PaginatedResponse<BookingDetailsDto>>> GetAll([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
     {
-        var query = _context.Bookings
-            .Include(b => b.User)
-            .Include(b => b.Room)
-            .ThenInclude(r => r.Hotel)
-            .OrderBy(b => b.Id)
-            .Select(b => new BookingDetailsDto
-            {
-                Id = b.Id,
-                UserName = b.User.Name,
-                RoomName = b.Room.RoomNumber,
-                HotelName = b.Room.Hotel.Name,
-                CheckInDate = b.CheckInDate,
-                CheckOutDate = b.CheckOutDate,
-                TotalAmount = b.TotalAmount,
-                IsPaid = b.IsPaid
-            });
+        _logger.LogInformation("Starting GetAll bookings request (Page: {Page}, PageSize: {PageSize})", page, pageSize);
 
-        return Ok(await GetPaginatedData(page, pageSize, query));
+        var bookings = Query<Booking>()
+            .Include(b => b.User)
+            .Include(b => b.Room).ThenInclude(r => r.Hotel)
+            .OrderBy(b => b.CreatedAt)
+            .Select(b => BookingDetailsDto.FromEntity(b));
+
+        var result = await PaginateAsync(bookings, page, pageSize);
+
+        _logger.LogInformation("Finished GetAll bookings request. Retrieved {Count} items.", result.Data?.Count());
+        return Ok(result);
     }
 
-
-    [HttpGet("all-bookings")]
-    public async Task<ActionResult<PaginatedResponse<BookingDetailsDto>>> GetPagedBookings(
-      [FromQuery] int pageSize,
-      [FromQuery] int pageNumber)
+    [HttpGet("{id:guid}")]
+    public async Task<ActionResult<BookingDetailsDto>> GetById(Guid id)
     {
-        var query = GetEntityQuery<Booking>()
+        _logger.LogInformation("Starting GetById for booking {BookingId}", id);
+
+        var booking = await Query<Booking>()
             .Include(b => b.User)
-            .Include(b => b.Room)
-            .ThenInclude(r => r.Hotel)
-            .OrderBy(b => b.Id)
-            .Select(b => new BookingDetailsDto
-            {
-                Id = b.Id,
-                UserName = b.User.Name,
-                RoomName = b.Room.RoomNumber,
-                HotelName = b.Room.Hotel.Name,
-                CheckInDate = b.CheckInDate,
-                CheckOutDate = b.CheckOutDate,
-                TotalAmount = b.TotalAmount,
-                IsPaid = b.IsPaid
-            });
-
-        return Ok(await GetPaginatedData(pageNumber, pageSize, query));
-    }
-
-
-    /*[HttpGet("summary")]
-    public async Task<ActionResult<string>> GetBookingSummary(Guid id)
-    {
-        var booking = await _context.Bookings.FindAsync(id);
-        if (booking == null)
-        {
-            return NotFound("Booking Not Found");
-        }
-
-        return Ok(booking.ToString());
-    }*/
-
-    [HttpGet("summary")]
-    public async Task<ActionResult<string>> GetBookingSummary(Guid id)
-    {
-        // eagerly load User, Room and Hotel
-        var booking = await _context.Bookings
-            .Include(b => b.User)
-            .Include(b => b.Room!)
-                .ThenInclude(r => r.Hotel)
+            .Include(b => b.Room).ThenInclude(r => r.Hotel)
             .FirstOrDefaultAsync(b => b.Id == id);
 
         if (booking == null)
-            return NotFound("Booking not found.");
+        {
+            _logger.LogWarning("Booking with ID {BookingId} not found.", id);
+            return NotFound();
+        }
 
+        _logger.LogInformation("Finished GetById for booking {BookingId}", id);
+        return Ok(BookingDetailsDto.FromEntity(booking));
+    }
+
+    [HttpGet("{id:guid}/summary")]
+    public async Task<ActionResult<string>> Summary(Guid id)
+    {
+        _logger.LogInformation("Starting Summary for booking {BookingId}", id);
+
+        var booking = await Query<Booking>()
+            .Include(b => b.User)
+            .Include(b => b.Room).ThenInclude(r => r.Hotel)
+            .FirstOrDefaultAsync(b => b.Id == id);
+
+        if (booking == null)
+        {
+            _logger.LogWarning("Booking summary request failed. Booking {BookingId} not found.", id);
+            return NotFound("Booking not found.");
+        }
         // guard against missing navigation (shouldn’t happen if your FK’s are intact)
         var userName = booking.User?.Name ?? "[unknown user]";
         var roomNum = booking.Room?.RoomNumber ?? "[unknown room]";
@@ -124,170 +93,206 @@ public class BookingsController(ApplicationDbContext context) : ControllerBase
             $"Amount:   {booking.TotalAmount:C}\n" +
             $"Status:   {paidText}, {cancelledText}";
 
+        //return Ok(summary);
+
+        _logger.LogInformation("Finished Summary for booking {BookingId}", id);
         return Ok(summary);
+        //return Ok(booking.ToString());
     }
 
-    // GET: api/Bookings/user/{userId}
-    [HttpGet("user/{userId}")]
-    public async Task<IActionResult> GetUserBookings(Guid userId)
+    [HttpGet("user/{userId:guid}")]
+    public async Task<ActionResult<IEnumerable<BookingDetailsDto>>> GetByUser(Guid userId)
     {
-        var bookings = await _context.Bookings
+        _logger.LogInformation("Starting GetByUser for user {UserId}", userId);
+
+        var bookings = await Query<Booking>()
             .Where(b => b.UserId == userId)
-            .Include(b => b.Room)
-            .Include(b => b.Room.Hotel)
+            .Include(b => b.User)
+            .Include(b => b.Room).ThenInclude(r => r.Hotel)
+            .OrderByDescending(b => b.CheckInDate)
             .ToListAsync();
 
-        if (bookings.Count == 0)
-            return NotFound("No bookings found for the user.");
-
-        return Ok(bookings);
-    }
-    [HttpGet("{id}")]
-    public async Task<ActionResult<Booking>> GetBooking(Guid id)
-    {
-        var booking = await _context.Bookings.FindAsync(id);
-        if (booking == null) return NotFound();
-        return booking;
-    }
-
-    [HttpPost("create-booking")]
-    public async Task<ActionResult<Booking>> CreateBooking([FromBody] BookingRequest request)
-    {
-        var currentDate = DateOnly.FromDateTime(DateTime.UtcNow);
-
-        // Validation: Check-in must be today or later
-        if (request.CheckInDate < currentDate)
-            return BadRequest("Check-in date cannot be in the past.");
-
-        // Validation: Check-in must be before check-out
-        if (request.CheckInDate >= request.CheckOutDate)
-            return BadRequest("Check-in date must be before check-out date.");
-
-        // Validation: Minimum stay should be at least 2 days
-        if ((request.CheckOutDate.DayNumber - request.CheckInDate.DayNumber) < 2)
-            return BadRequest("Check-out date must be at least 2 days after check-in date.");
-
-        var user = await _context.Users.FindAsync(request.UserId);
-        if (user == null)
-            return NotFound("User not found.");
-
-        var room = await _context.Rooms.FindAsync(request.RoomId);
-        if (room == null)
-            return NotFound("Room not found.");
-
-        var booking = Booking.CreateNew(request.UserId, request.RoomId, request.CheckInDate, request.CheckOutDate, room.PricePerNight);
-
-        _context.Bookings.Add(booking);
-        await _context.SaveChangesAsync();
-     
-        var dto = new BookingDetailsDto
+        if (!bookings.Any())
         {
-            Id = booking.Id,
-            UserName = user.Name,
-            RoomName = room.RoomNumber,
-            HotelName = room.Hotel?.Name,
-            CheckInDate = booking.CheckInDate,
-            CheckOutDate = booking.CheckOutDate,
-            TotalAmount = booking.TotalAmount,
-            IsPaid = booking.IsPaid
-        };
+            _logger.LogInformation("No bookings found for user {UserId}.", userId);
+            return NotFound("No bookings found for this user.");
+        }
 
-        return CreatedAtAction(nameof(GetBooking), new { id = dto.Id }, dto);
-
+        _logger.LogInformation("Finished GetByUser for user {UserId}. Found {Count} bookings.", userId, bookings.Count);
+        return Ok(bookings.Select(BookingDetailsDto.FromEntity));
     }
 
-    [HttpPut("{id}/mark-paid")]
-    public async Task<IActionResult> MarkAsPaid(Guid id)
+    [HttpPost]
+    public async Task<ActionResult<BookingDetailsDto>> Create([FromBody] BookingRequest request)
     {
+        _logger.LogInformation("Starting Create booking for user {UserId}", request.UserId);
+
+        try
+        {
+            var booking = await Booking.CreateNewAsync(_context, request);
+            await _context.SaveChangesAsync();
+
+            _logger.LogInformation("Successfully created booking {BookingId} for user {UserId}", booking.Id, booking.UserId);
+            var dto = BookingDetailsDto.FromEntity(booking);
+            return CreatedAtAction(nameof(GetById), new { id = dto.Id }, dto);
+        }
+        catch (Exception ex) when (ex is ArgumentException || ex is InvalidOperationException)
+        {
+            _logger.LogWarning(ex, "Failed to create booking.");
+            return BadRequest(ex.Message);
+        }
+    }
+
+    [HttpPut("{id:guid}/pay")]
+    public async Task<IActionResult> MarkPaid(Guid id)
+    {
+        _logger.LogInformation("Starting MarkPaid for booking {BookingId}", id);
+
         var booking = await _context.Bookings.FindAsync(id);
-        if (booking == null) return NotFound();
+        if (booking == null)
+        {
+            _logger.LogWarning("Booking {BookingId} not found for MarkPaid.", id);
+            return NotFound();
+        }
 
         try
         {
             booking.MarkAsPaid();
             await _context.SaveChangesAsync();
+            _logger.LogInformation("Finished MarkPaid for booking {BookingId}", id);
+            return NoContent();
         }
-        catch (InvalidOperationException ex)
+        catch (Exception ex)
         {
+            _logger.LogError(ex, "Error marking booking {BookingId} as paid.", id);
             return BadRequest(ex.Message);
         }
-
-        return NoContent();
     }
 
-    [HttpPut("{id}/cancel")]
-    public async Task<IActionResult> CancelBooking(Guid id)
+    [HttpPut("{id:guid}/cancel")]
+    public async Task<IActionResult> Cancel(Guid id)
     {
+        _logger.LogInformation("Starting cancel for booking {BookingId}", id);
+
         var booking = await _context.Bookings.FindAsync(id);
-        if (booking == null) return NotFound();
+        if (booking == null)
+        {
+            _logger.LogWarning("Booking {BookingId} not found for cancel.", id);
+            return NotFound();
+        }
 
         try
         {
             booking.Cancel();
             await _context.SaveChangesAsync();
+            _logger.LogInformation("Finished cancel for booking {BookingId}", id);
+            return NoContent();
         }
-        catch (InvalidOperationException ex)
+        catch (Exception ex)
         {
+            _logger.LogError(ex, "Error cancelling booking {BookingId}", id);
             return BadRequest(ex.Message);
         }
-
-        return NoContent();
     }
 
-    [HttpPut("{id}/extend")]
-    public async Task<IActionResult> ExtendBooking(Guid id, [FromBody] ExtendBookingRequest request)
+    [HttpPut("{id:guid}/uncancel")]
+    public async Task<IActionResult> UnCancel(Guid id)
     {
+        _logger.LogInformation("Starting uncancel for booking {BookingId}", id);
+
         var booking = await _context.Bookings.FindAsync(id);
-        if (booking == null) return NotFound();
+        if (booking == null)
+        {
+            _logger.LogWarning("Booking {BookingId} not found for uncancel.", id);
+            return NotFound();
+        }
 
         try
         {
-            booking.ExtendBooking(request.NewCheckOutDate, request.AdditionalAmount);
+            booking.UnCancel();
             await _context.SaveChangesAsync();
+            _logger.LogInformation("Finished uncancel for booking {BookingId}", id);
+            return NoContent();
         }
-        catch (InvalidOperationException ex)
+        catch (Exception ex)
         {
+            _logger.LogError(ex, "Error uncancelling booking {BookingId}", id);
             return BadRequest(ex.Message);
+        }
+    }
+
+
+    [HttpPut("{id:guid}/extend")]
+    public async Task<IActionResult> Extend(Guid id, [FromBody] ExtendBookingRequest request)
+    {
+        _logger.LogInformation("Starting Extend for booking {BookingId}", id);
+
+        var booking = await _context.Bookings
+            .Include(b => b.Room)
+            .FirstOrDefaultAsync(b => b.Id == id);
+
+        if (booking == null)
+        {
+            _logger.LogWarning("Booking {BookingId} not found for Extend.", id);
+            return NotFound();
+        }
+
+        try
+        {
+            booking.ExtendBooking(request.NewCheckOutDate, booking.Room.PricePerNight, request.AdditionalAmount);
+            await _context.SaveChangesAsync();
+            _logger.LogInformation("Finished Extend for booking {BookingId}", id);
+            return NoContent();
         }
         catch (ArgumentException ex)
         {
+            _logger.LogWarning(ex, "Invalid extend request for booking {BookingId}", id);
             return BadRequest(ex.Message);
         }
-
-        return NoContent();
     }
 
-    [HttpPut("{id}/change-dates")]
+
+    [HttpPut("{id:guid}/change-dates")]
     public async Task<IActionResult> ChangeDates(Guid id, [FromBody] ChangeBookingDatesRequest request)
     {
+        _logger.LogInformation("Starting ChangeDates for booking {BookingId}", id);
+
         var booking = await _context.Bookings.FindAsync(id);
-        if (booking == null) return NotFound();
+        if (booking == null)
+        {
+            _logger.LogWarning("Booking {BookingId} not found for ChangeDates.", id);
+            return NotFound();
+        }
 
         try
         {
             booking.ChangeDates(request.NewCheckIn, request.NewCheckOut);
             await _context.SaveChangesAsync();
-        }
-        catch (InvalidOperationException ex)
-        {
-            return BadRequest(ex.Message);
+            _logger.LogInformation("Finished ChangeDates for booking {BookingId}", id);
+            return NoContent();
         }
         catch (ArgumentException ex)
         {
+            _logger.LogWarning(ex, "Invalid change dates request for booking {BookingId}", id);
             return BadRequest(ex.Message);
         }
-
-        return NoContent();
     }
 
-    [HttpDelete("{id}")]
-    public async Task<IActionResult> DeleteBooking(Guid id)
+    [HttpDelete("{id:guid}")]
+    public async Task<IActionResult> Delete(Guid id)
     {
+        _logger.LogInformation("Starting Delete for booking {BookingId}", id);
+
         var booking = await _context.Bookings.FindAsync(id);
-        if (booking == null) return NotFound();
+        if (booking == null)
+        {
+            _logger.LogWarning("Booking {BookingId} not found for Delete.", id);
+            return NotFound();
+        }
 
         _context.Bookings.Remove(booking);
         await _context.SaveChangesAsync();
+        _logger.LogInformation("Finished Delete for booking {BookingId}", id);
 
         return NoContent();
     }
