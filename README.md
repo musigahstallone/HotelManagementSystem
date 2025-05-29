@@ -2,8 +2,6 @@
 
 A full-stack Hotel Management System built with **.NET 9** and **Angular**, designed to handle end-to-end hotel booking operations, including searching, booking, queueing, cancellation, and payment processing.
 
----
-
 ## 🚀 Features
 
 ### ✅ Guest Features
@@ -30,8 +28,6 @@ A full-stack Hotel Management System built with **.NET 9** and **Angular**, desi
 * Real-time status updates and visual indicators (badges)
 * Responsive UI with smooth UX using Tailwind CSS & shadcn/ui
 
----
-
 ## 🧰 Tech Stack
 
 | Layer      | Technology                                                          |
@@ -45,8 +41,6 @@ A full-stack Hotel Management System built with **.NET 9** and **Angular**, desi
 | Payment    | MPesa, Stripe                                                       |
 | Auth       | JWT or NextAuth.js (if SSR)                                         |
 | QR Tickets | Email + QR Confirmation (planned)                                   |
-
----
 
 ## 📦 Project Structure
 
@@ -70,8 +64,6 @@ A full-stack Hotel Management System built with **.NET 9** and **Angular**, desi
 └── README.md
 ```
 
----
-
 ## 🛠 Setup Instructions
 
 ### Backend (.NET 9)
@@ -92,8 +84,6 @@ cd frontend
 npm install
 ng serve
 ```
-
----
 
 ## 🔐 Environment Variables
 
@@ -116,8 +106,6 @@ export const environment = {
 }
 ```
 
----
-
 ## 🔍 Booking Status Logic
 
 | Property        | Description                        |
@@ -125,8 +113,6 @@ export const environment = {
 | `isCancelled`   | If booking is user/admin cancelled |
 | `isPaid`        | Indicates if payment was completed |
 | `queuePosition` | Shown when room is queued          |
-
----
 
 ## 🧪 Future Enhancements
 
@@ -137,8 +123,6 @@ export const environment = {
 * Ratings and reviews for hotels
 * Calendar view for hotel availability
 
----
-
 ## 🤝 Contributing
 
 1. Fork the repository
@@ -147,13 +131,9 @@ export const environment = {
 4. Push to the branch: `git push origin feature/your-feature-name`
 5. Open a pull request
 
----
-
 ## 📄 License
 
 MIT License - See [LICENSE](LICENSE) file for details.
-
----
 
 ## 📫 Contact
 
