@@ -1,16 +1,12 @@
-Sure! Here's a professional and comprehensive `README.md` for your **Hotel Management System**, tailored for a full-stack app with `.NET 9` backend, `Angular` frontend, and features like bookings, payments, status handling, and admin features.
-
----
-
-# ?? Hotel Management System
+# 🏨 Hotel Management System
 
 A full-stack Hotel Management System built with **.NET 9** and **Angular**, designed to handle end-to-end hotel booking operations, including searching, booking, queueing, cancellation, and payment processing.
 
 ---
 
-## ?? Features
+## 🚀 Features
 
-### ? Guest Features
+### ✅ Guest Features
 
 * Search and view hotel listings
 * Book rooms with real-time availability
@@ -19,7 +15,7 @@ A full-stack Hotel Management System built with **.NET 9** and **Angular**, desi
 * Pay for bookings via integrated MPesa/Stripe
 * View and manage booking history
 
-### ??? Admin Features
+### 🛠️ Admin Features
 
 * View all bookings with pagination
 * Mark bookings as paid
@@ -27,7 +23,7 @@ A full-stack Hotel Management System built with **.NET 9** and **Angular**, desi
 * Manage hotels, rooms, and pricing
 * View payment statuses and customer queues
 
-### ?? Smart Logic
+### 🧠 Smart Logic
 
 * Queued booking system when rooms are unavailable
 * Night calculation and pricing logic
@@ -36,7 +32,7 @@ A full-stack Hotel Management System built with **.NET 9** and **Angular**, desi
 
 ---
 
-## ?? Tech Stack
+## 🧰 Tech Stack
 
 | Layer      | Technology                                                          |
 | ---------- | ------------------------------------------------------------------- |
@@ -52,31 +48,31 @@ A full-stack Hotel Management System built with **.NET 9** and **Angular**, desi
 
 ---
 
-## ?? Project Structure
+## 📦 Project Structure
 
 ```
 /hotel-management-system
-?
-??? backend/
-?   ??? Controllers/
-?   ??? Services/
-?   ??? Models/
-?   ??? Data/
-?   ??? Program.cs (.NET 9 entry)
-?
-??? frontend/
-?   ??? src/app/
-?   ?   ??? bookings/
-?   ?   ??? hotels/
-?   ?   ??? shared/
-?   ??? tailwind.config.js
-?
-??? README.md
+│
+├── backend/
+│   ├── Controllers/
+│   ├── Services/
+│   ├── Models/
+│   ├── Data/
+│   └── Program.cs (.NET 9 entry)
+│
+├── frontend/
+│   ├── src/app/
+│   │   ├── bookings/
+│   │   ├── hotels/
+│   │   └── shared/
+│   └── tailwind.config.js
+│
+└── README.md
 ```
 
 ---
 
-## ?? Setup Instructions
+## 🛠 Setup Instructions
 
 ### Backend (.NET 9)
 
@@ -99,7 +95,7 @@ ng serve
 
 ---
 
-## ?? Environment Variables
+## 🔐 Environment Variables
 
 For backend:
 
@@ -122,7 +118,7 @@ export const environment = {
 
 ---
 
-## ?? Booking Status Logic
+## 🔍 Booking Status Logic
 
 | Property        | Description                        |
 | --------------- | ---------------------------------- |
@@ -132,7 +128,7 @@ export const environment = {
 
 ---
 
-## ?? Future Enhancements
+## 🧪 Future Enhancements
 
 * Add full QR code-based ticket scanning
 * Email + SMS notifications
@@ -143,7 +139,7 @@ export const environment = {
 
 ---
 
-## ?? Contributing
+## 🤝 Contributing
 
 1. Fork the repository
 2. Create a new branch: `git checkout -b feature/your-feature-name`
@@ -153,18 +149,14 @@ export const environment = {
 
 ---
 
-## ?? License
+## 📄 License
 
 MIT License - See [LICENSE](LICENSE) file for details.
 
 ---
 
-## ?? Contact
+## 📫 Contact
 
-Made with ?? by **Stallone Musigah**
-?? Email: \[[musigahstallone@gmail.com](mailto:musigahstallone@gmail.com)]
-?? Kenya
-
----
-
-Would you like this README saved as a downloadable file or opened in canvas for editing?
+Made with ❤️ by **Stallone**
+📧 Email: \[[YourEmail@example.com](mailto:YourEmail@example.com)]
+🌍 Kenya
